@@ -74,10 +74,50 @@
   .stock-low td { background: #fff8e1 !important; }
   .stock-zero td { background: #fce8e6 !important; }
 
+  /* LOGIN */
+  #loginScreen {
+    position: fixed; inset: 0; background: linear-gradient(135deg, #1a3a6b, #254f94);
+    display: flex; align-items: center; justify-content: center; z-index: 1000;
+  }
+  .login-box {
+    background: white; border-radius: 14px; padding: 36px 32px; width: 320px;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.25); text-align: center;
+  }
+  .login-box h1 { font-size: 18px; color: #1a3a6b; margin-bottom: 4px; }
+  .login-box p { font-size: 12px; color: #888; margin-bottom: 22px; }
+  .login-box .form-group { text-align: left; margin-bottom: 14px; }
+  .login-box .btn { width: 100%; padding: 10px; font-size: 14px; margin-top: 6px; }
+  .login-error { color: #c0392b; font-size: 12px; margin-top: 10px; min-height: 16px; }
+  #appWrapper { display: none; }
+  #appWrapper.visible { display: block; }
+
+  .user-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #f0f0f0; font-size: 13px; }
+  .user-row:last-child { border-bottom: none; }
+
   @media print { nav { display: none; } .section { display: block !important; } }
 </style>
 </head>
 <body>
+
+<!-- ===== LOGIN ===== -->
+<div id="loginScreen">
+  <div class="login-box">
+    <h1>🏥 Sistema Farmacia</h1>
+    <p>Ingresa tus credenciales para continuar</p>
+    <div class="form-group">
+      <label>Usuario</label>
+      <input type="text" id="login_usuario" placeholder="Nombre de usuario" onkeydown="if(event.key==='Enter')intentarLogin()">
+    </div>
+    <div class="form-group">
+      <label>Contraseña</label>
+      <input type="password" id="login_clave" placeholder="Contraseña" onkeydown="if(event.key==='Enter')intentarLogin()">
+    </div>
+    <button class="btn btn-primary" onclick="intentarLogin()">Ingresar</button>
+    <div class="login-error" id="loginError"></div>
+  </div>
+</div>
+
+<div id="appWrapper">
 
 <nav>
   <div class="brand">🏥 Farmacia —  2026</div>
@@ -87,6 +127,12 @@
   <button onclick="showSection('inventario')">Inventario</button>
   <button onclick="showSection('facturas')">Facturas</button>
   <button onclick="showSection('reportes')">Reportes</button>
+  <button onclick="showSection('informe')">Informe</button>
+  <button id="navUsuarios" onclick="showSection('usuarios')" style="display:none;">Usuarios</button>
+  <button id="navProveedores" onclick="showSection('proveedores')">Proveedores</button>
+  <div style="flex:1"></div>
+  <span id="usuarioActual" style="color:rgba(255,255,255,0.7);font-size:12px;margin-right:14px;"></span>
+  <button onclick="cerrarSesion()" style="color:#ffb3b3;">🚪 Salir</button>
 </nav>
 
 <!-- ===== DASHBOARD ===== -->
@@ -122,7 +168,7 @@
       <div class="form-group"><label>Fecha</label><input type="date" id="c_fecha" value="2026-06-09"></div>
       <div class="form-group"><label>Producto</label><select id="c_producto" onchange="fillCompraPrecios()"><option value="" selected="selected">-- Seleccionar --</option></select></div>
       <div class="form-group"><label>Cantidad</label><input type="number" id="c_cantidad" min="1" value="1" oninput="calcCompra()"></div>
-      <div class="form-group"><label>Precio Costo/Unidad (Q)</label><input type="number" id="c_precio" step="0.01" oninput="calcCompra()"></div>
+      <div class="form-group"><label>Precio Costo/Unidad (Q)</label><input type="number" id="c_precio" step="0.0001" oninput="calcCompra()"></div>
       <div class="form-group"><label>Total Compra (Q)</label><input type="number" id="c_total" readonly="readonly" style="background:#edf2fa;font-weight:700;"></div>
       <div class="form-group" id="c_ppp_group" style="display:none;">
         <label>⚖️ Precio Promedio Ponderado</label>
@@ -134,7 +180,7 @@
   </div>
   <div class="panel">
     <h2>📋 Historial de Compras</h2>
-    <div class="search-bar"><input type="text" id="buscarCompra" placeholder="Buscar producto..." oninput="renderCompras()"><button class="btn btn-secondary" onclick="exportCSV('compras')">⬇ Exportar CSV</button></div>
+    <div class="search-bar"><input type="text" id="buscarCompra" placeholder="Buscar producto..." oninput="renderCompras()"><button class="btn btn-secondary" onclick="exportCSV('compras')">⬇ Exportar CSV</button><button class="btn btn-secondary" onclick="document.getElementById('importCompras').click()">⬆ Importar CSV</button><input type="file" id="importCompras" accept=".csv" style="display:none" onchange="importCSV(event,'compras')"></div>
     <div class="tbl-wrap"><table><thead><tr><th>Fecha</th><th>Código</th><th>Producto</th><th>Cantidad</th><th>Precio/U</th><th>PPP</th><th>Total</th><th></th></tr></thead><tbody id="tablaCompras"></tbody></table></div>
   </div>
 </div>
@@ -157,7 +203,7 @@
   </div>
   <div class="panel">
     <h2>📋 Historial de Ventas</h2>
-    <div class="search-bar"><input type="text" id="buscarVenta" placeholder="Buscar producto o paciente..." oninput="renderVentas()"><button class="btn btn-secondary" onclick="exportCSV('ventas')">⬇ Exportar CSV</button></div>
+    <div class="search-bar"><input type="text" id="buscarVenta" placeholder="Buscar producto o paciente..." oninput="renderVentas()"><button class="btn btn-secondary" onclick="exportCSV('ventas')">⬇ Exportar CSV</button><button class="btn btn-secondary" onclick="document.getElementById('importVentas').click()">⬆ Importar CSV</button><input type="file" id="importVentas" accept=".csv" style="display:none" onchange="importCSV(event,'ventas')"></div>
     <div class="tbl-wrap"><table><thead><tr><th>Fecha</th><th>Código</th><th>Producto</th><th>Paciente</th><th>Cant.</th><th>P.Costo</th><th>P.Venta</th><th>Total</th><th>Utilidad</th><th></th></tr></thead><tbody id="tablaVentas"></tbody></table></div>
   </div>
 </div>
@@ -189,7 +235,7 @@
       <div class="form-group"><label>Código</label><input type="text" id="i_codigo" placeholder="M076"></div>
       <div class="form-group"><label>Producto</label><input type="text" id="i_producto" placeholder="Nombre del medicamento"></div>
       <div class="form-group"><label>Stock Inicial</label><input type="number" id="i_stock" min="0" value="0"></div>
-      <div class="form-group"><label>Precio Costo/U (Q)</label><input type="number" id="i_costo" step="0.01"></div>
+      <div class="form-group"><label>Precio Costo/U (Q)</label><input type="number" id="i_costo" step="0.0001"></div>
       <div class="form-group"><label>Precio Venta/U (Q)</label><input type="number" id="i_pventa" step="0.01"></div>
     </div>
     <div class="form-actions"><button class="btn btn-primary" onclick="agregarProducto()">Agregar Producto</button><button class="btn btn-secondary" onclick="limpiarInventario()">Limpiar</button></div>
@@ -201,7 +247,12 @@
     <div class="search-bar">
       <input type="text" id="buscarInv" placeholder="Buscar producto o código..." oninput="renderInventario()">
       <select id="filtroStock" onchange="renderInventario()"><option value="todos" selected="selected">Todos</option><option value="disponible">Con stock</option><option value="bajo">Stock bajo (≤2)</option><option value="agotado">Agotado</option></select>
+      <label style="display:flex;align-items:center;gap:6px;font-size:13px;color:#555;cursor:pointer;">
+        <input type="checkbox" id="ocultarAgotados" onchange="renderInventario()"> Ocultar agotados (stock = 0)
+      </label>
       <button class="btn btn-secondary" onclick="exportCSV('inventario')">⬇ Exportar CSV</button>
+      <button class="btn btn-secondary" onclick="document.getElementById('importInventario').click()">⬆ Importar CSV</button>
+      <input type="file" id="importInventario" accept=".csv" style="display:none" onchange="importCSV(event,'inventario')">
     </div>
     <div class="tbl-wrap"><table><thead><tr><th>Código</th><th>Producto</th><th>Stock Ini.</th><th>Compras</th><th>Ventas</th><th>Disponible ✏️</th><th>P.Costo ✏️</th><th>P.Venta ✏️</th><th>Val. Costo</th><th>Val. Venta</th><th>Estado</th><th></th></tr></thead><tbody id="tablaInventario"></tbody></table></div>
   </div>
@@ -209,12 +260,26 @@
 
 <!-- ===== FACTURAS ===== -->
 <div id="facturas" class="section">
+
+  <!-- MARCAR FACTURA COMO PAGADA -->
+  <div class="panel" style="border:2px solid #22863a;background:#f6fdf8;">
+    <h2 style="color:#22863a;">✅ Marcar Factura como Pagada</h2>
+    <p style="font-size:13px;color:#555;margin-bottom:14px;">Busca una factura pendiente por su número, agrega la fecha de pago y observaciones, y cambia su estado a "Pagado".</p>
+    <div class="form-grid">
+      <div class="form-group">
+        <label>Buscar No. Factura</label>
+        <input type="text" id="pf_buscar" placeholder="Escribe el número de factura..." oninput="buscarFacturaPendiente()">
+      </div>
+    </div>
+    <div id="pf_resultado" style="margin-top:12px;"></div>
+  </div>
+
   <div class="panel">
     <h2>➕ Registrar Factura</h2>
     <div class="form-grid">
       <div class="form-group"><label>No. Factura</label><input type="text" id="f_numero" placeholder="FAC-001"></div>
-      <div class="form-group"><label>Proveedor</label><select id="f_proveedor"><option value="Coide" selected="selected">Coide</option><option value="Lanquetan">Lanquetan</option><option value="Resco">Resco</option><option value="Amicelco">Amicelco</option><option value="Lancasco">Lancasco</option><option value="Topfarma">Topfarma</option><option value="Otro">Otro</option></select></div>
-      <div class="form-group"><label>Días Crédito</label><input type="number" id="f_dias" value="30" min="0"></div>
+      <div class="form-group"><label>Proveedor</label><select id="f_proveedor" onchange="autoFillDiasCredito()"><option value="">-- Seleccionar --</option></select></div>
+      <div class="form-group"><label>Días Crédito</label><input type="number" id="f_dias" value="30" min="0" onchange="calcVencimiento()"></div>
       <div class="form-group"><label>Fecha Emisión</label><input type="date" id="f_emision" onchange="calcVencimiento()" value="2026-06-09"></div>
       <div class="form-group"><label>Fecha Vencimiento</label><input type="date" id="f_vencimiento" readonly="readonly" style="background:#edf2fa;"></div>
       <div class="form-group"><label>Monto (Q)</label><input type="number" id="f_monto" step="0.01"></div>
@@ -229,9 +294,12 @@
     <div class="search-bar">
       <input type="text" id="buscarFactura" placeholder="Buscar proveedor o número..." oninput="renderFacturas()">
       <select id="filtroFactura" onchange="renderFacturas()"><option value="todos" selected="selected">Todas</option><option value="Pendiente">Pendientes</option><option value="Pagado">Pagadas</option></select>
+      <select id="ordenFactura" onchange="renderFacturas()"><option value="ninguno" selected="selected">Sin ordenar</option><option value="asc">Días restantes: menor a mayor</option><option value="desc">Días restantes: mayor a menor</option></select>
       <button class="btn btn-secondary" onclick="exportCSV('facturas')">⬇ Exportar CSV</button>
+      <button class="btn btn-secondary" onclick="document.getElementById('importFacturas').click()">⬆ Importar CSV</button>
+      <input type="file" id="importFacturas" accept=".csv" style="display:none" onchange="importCSV(event,'facturas')">
     </div>
-    <div class="tbl-wrap"><table><thead><tr><th>No. Factura</th><th>Proveedor</th><th>Días Cred.</th><th>F. Emisión</th><th>F. Vencimiento</th><th>Monto</th><th>Estado</th><th>F. Pago</th><th>Días Rest.</th><th>Observaciones</th><th></th></tr></thead><tbody id="tablaFacturas"></tbody></table></div>
+    <div class="tbl-wrap"><table><thead><tr><th>No. Factura</th><th>Proveedor</th><th>Días Cred.</th><th>F. Emisión</th><th>F. Vencimiento</th><th>Monto</th><th>Estado</th><th>F. Pago</th><th>Días Rest.</th><th>Observaciones</th><th>Acciones</th></tr></thead><tbody id="tablaFacturas"></tbody></table></div>
   </div>
 </div>
 
@@ -261,16 +329,164 @@
   </div>
 </div>
 
+<!-- ===== INFORME MENSUAL ===== -->
+<div id="informe" class="section">
+
+  <div class="panel" style="text-align:center;">
+    <h2 style="border:none;">📑 Informe Financiero del Mes <span id="inf_mesLabel" style="color:#888;font-weight:400;font-size:13px;"></span></h2>
+  </div>
+
+  <!-- VALORES INICIALES (editables) -->
+  <div class="panel" style="border:2px solid #4da6ff;background:#f5faff;">
+    <h2 style="color:#1a3a6b;">⚙️ Saldos Iniciales del Mes (editable)</h2>
+    <p style="font-size:13px;color:#555;margin-bottom:14px;">Estos valores provienen del cierre del mes anterior. Ajústalos si es la primera vez que usas este informe.</p>
+    <div class="form-grid">
+      <div class="form-group"><label>Saldo Costos Mes Anterior (Q)</label><input type="number" step="0.01" id="inf_saldoCostoAnt" oninput="renderInforme()"></div>
+      <div class="form-group"><label>Utilidades Retenidas (Q)</label><input type="number" step="0.01" id="inf_utilRetenidas" oninput="renderInforme()"></div>
+      <div class="form-group"><label>Participación semestral inversión (Q)</label><input type="number" step="0.01" id="inf_partSemestre" value="0" oninput="renderInforme()"></div>
+    </div>
+  </div>
+
+  <!-- CUADRE AUTOMÁTICO -->
+  <div class="panel" id="cuadrePanel" style="border:2px solid #22863a;">
+    <h2 id="cuadreTitulo">⚖️ Cuadre Automático de Inventario y Facturas</h2>
+    <div class="form-grid" style="grid-template-columns:1fr 1fr 1fr;align-items:center;">
+      <div style="text-align:center;">
+        <div style="font-size:11px;color:#666;text-transform:uppercase;">Costo de Ventas Disponible</div>
+        <div id="cuadre_costoVentasDisp" style="font-size:20px;font-weight:700;color:#1a3a6b;">Q 0.00</div>
+      </div>
+      <div style="text-align:center;font-size:22px;color:#888;">+</div>
+      <div style="text-align:center;">
+        <div style="font-size:11px;color:#666;text-transform:uppercase;">Costo de Inventario</div>
+        <div id="cuadre_costoInv" style="font-size:20px;font-weight:700;color:#1a3a6b;">Q 0.00</div>
+      </div>
+    </div>
+    <div style="text-align:center;font-size:22px;color:#888;margin:6px 0;">=</div>
+    <div style="text-align:center;">
+      <div style="font-size:11px;color:#666;text-transform:uppercase;">Suma (Costo Ventas Disp. + Costo Inventario)</div>
+      <div id="cuadre_suma" style="font-size:24px;font-weight:700;color:#e67e22;">Q 0.00</div>
+    </div>
+    <div style="text-align:center;font-size:22px;color:#888;margin:6px 0;">vs</div>
+    <div style="text-align:center;margin-bottom:14px;">
+      <div style="font-size:11px;color:#666;text-transform:uppercase;">Total Facturas por Pagar</div>
+      <div id="cuadre_facturasPorPagar" style="font-size:24px;font-weight:700;color:#c0392b;">Q 0.00</div>
+    </div>
+    <div id="cuadre_resultado" style="text-align:center;padding:12px;border-radius:8px;font-weight:700;font-size:15px;"></div>
+  </div>
+
+  <div class="report-grid">
+    <!-- INGRESOS -->
+    <div class="panel">
+      <h2>🟢 Ingresos</h2>
+      <div id="inf_ingresos"></div>
+    </div>
+
+    <!-- EGRESOS / FACTURAS PAGADAS -->
+    <div class="panel">
+      <h2>🔴 Egresos — Facturas Pagadas del Mes</h2>
+      <div class="tbl-wrap"><table><thead><tr><th>Fecha Pago</th><th>Proveedor</th><th>No. Factura</th><th>Valor</th></tr></thead><tbody id="inf_egresos"></tbody></table></div>
+      <div class="prov-row" style="font-weight:700;border-top:2px solid #d0d7e3;margin-top:6px;padding-top:10px;"><span>Total Facturas Pagadas</span><b id="inf_totalFactPagadas" style="color:#c0392b">Q 0.00</b></div>
+    </div>
+
+    <!-- COSTO DE VENTAS -->
+    <div class="panel">
+      <h2>💰 Costo de Ventas</h2>
+      <div id="inf_costoVentas"></div>
+    </div>
+
+    <!-- UTILIDAD DE VENTAS -->
+    <div class="panel">
+      <h2>📈 Utilidad de Ventas</h2>
+      <div id="inf_utilidad"></div>
+    </div>
+
+    <!-- FLUJO DE INVENTARIO -->
+    <div class="panel">
+      <h2>🔄 Flujo de Inventario</h2>
+      <div id="inf_flujoInv"></div>
+    </div>
+
+    <!-- SALDO DE INVENTARIO -->
+    <div class="panel">
+      <h2>📦 Saldo de Inventario</h2>
+      <div id="inf_saldoInv"></div>
+    </div>
+  </div>
+
+  <!-- APOYO A PACIENTE CRÓNICO -->
+  <div class="panel">
+    <h2>🩺 Apoyo a Paciente Crónico</h2>
+    <p style="font-size:12px;color:#888;margin-bottom:10px;">Ventas del mes a pacientes registrados (no clasificados como "—").</p>
+    <div class="tbl-wrap"><table><thead><tr><th>Fecha</th><th>Producto</th><th>Paciente</th><th>Cantidad</th></tr></thead><tbody id="inf_apoyoPaciente"></tbody></table></div>
+  </div>
+
+  <div style="text-align:center;margin-top:10px;">
+    <button class="btn btn-primary" onclick="window.print()">🖨 Imprimir Informe</button>
+    <button class="btn btn-secondary" onclick="exportInformeCSV()">⬇ Exportar Informe CSV</button>
+  </div>
+</div>
+
+<!-- ===== USUARIOS (solo Administrador) ===== -->
+<div id="usuarios" class="section">
+  <div class="panel">
+    <h2>➕ Registrar Usuario</h2>
+    <div class="form-grid">
+      <div class="form-group"><label>Nombre de Usuario</label><input type="text" id="u_nombre" placeholder="Ej. jperez"></div>
+      <div class="form-group"><label>Nombre Completo</label><input type="text" id="u_completo" placeholder="Ej. Juan Pérez"></div>
+      <div class="form-group"><label>Contraseña</label><input type="password" id="u_clave" placeholder="Contraseña"></div>
+      <div class="form-group"><label>Rol</label><select id="u_rol"><option value="usuario">Usuario</option><option value="administrador">Administrador</option></select></div>
+    </div>
+    <div class="form-actions"><button class="btn btn-primary" onclick="registrarUsuario()">Guardar Usuario</button><button class="btn btn-secondary" onclick="limpiarUsuario()">Limpiar</button></div>
+  </div>
+  <div class="panel">
+    <h2>👥 Usuarios del Sistema</h2>
+    <div id="listaUsuarios"></div>
+  </div>
+</div>
+
+<!-- ===== PROVEEDORES ===== -->
+<div id="proveedores" class="section">
+  <div class="panel">
+    <h2>➕ Registrar Proveedor</h2>
+    <div class="form-grid">
+      <div class="form-group"><label>Nombre del Proveedor</label><input type="text" id="p_nombre" placeholder="Ej. Coide"></div>
+      <div class="form-group"><label>Días de Crédito</label><input type="number" id="p_dias" min="0" value="30" placeholder="30"></div>
+      <div class="form-group"><label>Teléfono</label><input type="text" id="p_telefono" placeholder="Ej. 2222-3333"></div>
+      <div class="form-group"><label>Correo electrónico</label><input type="email" id="p_correo" placeholder="ventas@proveedor.com"></div>
+      <div class="form-group"><label>Contacto</label><input type="text" id="p_contacto" placeholder="Nombre del representante"></div>
+      <div class="form-group" style="grid-column:span 2"><label>Notas</label><textarea id="p_notas" rows="2" style="resize:vertical;" placeholder="Observaciones, condiciones, etc."></textarea></div>
+    </div>
+    <div class="form-actions">
+      <button class="btn btn-primary" onclick="registrarProveedor()">Guardar Proveedor</button>
+      <button class="btn btn-secondary" onclick="limpiarProveedor()">Limpiar</button>
+    </div>
+  </div>
+  <div class="panel">
+    <h2>🏢 Proveedores Registrados</h2>
+    <div class="tbl-wrap">
+      <table><thead><tr><th>Proveedor</th><th>Días Crédito</th><th>Teléfono</th><th>Correo</th><th>Contacto</th><th>Notas</th><th></th></tr></thead>
+      <tbody id="tablaProveedores"></tbody></table>
+    </div>
+  </div>
+</div>
+
+</div><!-- /appWrapper -->
+
 <script>
 // ===== DATA =====
 let db = {
   inventario: [],
   compras: [],
   ventas: [],
-  facturas: []
+  facturas: [],
+  usuarios: [],
+  proveedores: []
 };
 
-const PROVEEDORES = ['Coide','Lanquetan','Resco','Amicelco','Lancasco','Topfarma'];
+// PROVEEDORES se obtiene dinámicamente de db.proveedores
+function getNombresProveedores() {
+  return (db.proveedores||[]).map(p => p.nombre);
+}
 
 // Initial inventory from Excel
 const inventarioInicial = [
@@ -354,9 +570,28 @@ const inventarioInicial = [
 function loadDB() {
   try {
     const s = localStorage.getItem('farmacia_db_jul26');
-    if (s) { db = JSON.parse(s); }
-    else { initDB(); }
+    if (s) {
+      db = JSON.parse(s);
+      if (!db.usuarios || db.usuarios.length === 0) {
+        db.usuarios = [{ id: Date.now(), usuario: 'admin', completo: 'Administrador', clave: 'admin123', rol: 'administrador' }];
+      }
+      if (!db.proveedores || db.proveedores.length === 0) {
+        db.proveedores = proveedoresIniciales();
+      }
+      saveDB();
+    } else { initDB(); }
   } catch(e) { initDB(); }
+}
+
+function proveedoresIniciales() {
+  return [
+    { id: 1, nombre:'Coide',      dias:60, telefono:'', correo:'', contacto:'', notas:'' },
+    { id: 2, nombre:'Lanquetan',  dias:60, telefono:'', correo:'', contacto:'', notas:'' },
+    { id: 3, nombre:'Resco',      dias:45, telefono:'', correo:'', contacto:'', notas:'' },
+    { id: 4, nombre:'Amicelco',   dias:30, telefono:'', correo:'', contacto:'', notas:'' },
+    { id: 5, nombre:'Lancasco',   dias:30, telefono:'', correo:'', contacto:'', notas:'' },
+    { id: 6, nombre:'Topfarma',   dias:30, telefono:'', correo:'', contacto:'', notas:'' },
+  ];
 }
 
 function initDB() {
@@ -366,6 +601,8 @@ function initDB() {
     precioCosto: r[3], precioVenta: r[4]
   }));
   db.compras = []; db.ventas = []; db.facturas = [];
+  db.usuarios = [{ id: Date.now(), usuario: 'admin', completo: 'Administrador', clave: 'admin123', rol: 'administrador' }];
+  db.proveedores = proveedoresIniciales();
   saveDB();
 }
 
@@ -384,7 +621,10 @@ function showSection(id) {
   if (id === 'inventario') renderInventario();
   if (id === 'compras') { fillProductoSelect('c_producto'); renderCompras(); }
   if (id === 'ventas') { fillProductoSelect('v_producto'); renderVentas(); }
-  if (id === 'facturas') renderFacturas();
+  if (id === 'facturas') { fillProveedorSelect(); renderFacturas(); }
+  if (id === 'usuarios') renderUsuarios();
+  if (id === 'informe') renderInforme();
+  if (id === 'proveedores') renderProveedores();
 }
 
 // ===== UTILS =====
@@ -452,7 +692,7 @@ function diasRestantes(fecha) {
 // ===== COMPRAS =====
 function fillCompraPrecios() {
   const p = getProd(document.getElementById('c_producto').value);
-  if (p) document.getElementById('c_precio').value = p.precioCosto.toFixed(2);
+  if (p) document.getElementById('c_precio').value = p.precioCosto.toFixed(4);
   calcCompra();
 }
 function calcCompra() {
@@ -589,10 +829,12 @@ function agregarProducto() {
 function renderInventario() {
   const q = (document.getElementById('buscarInv').value||'').toLowerCase();
   const filtro = document.getElementById('filtroStock').value;
+  const ocultarAgotados = document.getElementById('ocultarAgotados').checked;
   let data = db.inventario.filter(p => !q || p.producto.toLowerCase().includes(q) || p.codigo.toLowerCase().includes(q));
   if (filtro === 'disponible') data = data.filter(p => p.disponible > 2);
   if (filtro === 'bajo') data = data.filter(p => p.disponible > 0 && p.disponible <= 2);
   if (filtro === 'agotado') data = data.filter(p => p.disponible === 0);
+  if (ocultarAgotados) data = data.filter(p => p.disponible !== 0);
   document.getElementById('tablaInventario').innerHTML = data.length
     ? data.map(p => {
         const cls = p.disponible === 0 ? 'stock-zero' : p.disponible <= 2 ? 'stock-low' : '';
@@ -607,7 +849,7 @@ function renderInventario() {
           <td>${p.compras}</td>
           <td>${p.ventas}</td>
           <td style="${editStyle}" title="Clic para editar disponible" onclick="editarCelda(this,'${p.codigo}','disponible')"><b>${p.disponible}</b></td>
-          <td style="${editStyle}" title="Clic para editar precio costo" onclick="editarCelda(this,'${p.codigo}','precioCosto')">${p.precioCosto.toFixed(2)}</td>
+          <td style="${editStyle}" title="Clic para editar precio costo" onclick="editarCelda(this,'${p.codigo}','precioCosto')">${p.precioCosto.toFixed(4)}</td>
           <td style="${editStyle}" title="Clic para editar precio venta" onclick="editarCelda(this,'${p.codigo}','precioVenta')">${p.precioVenta.toFixed(2)}</td>
           <td>${Q(valC)}</td>
           <td>${Q(valV)}</td>
@@ -622,9 +864,10 @@ function editarCelda(td, codigo, campo) {
   if (td.querySelector('input')) return;
   const p = getProd(codigo);
   if (!p) return;
-  const valorActual = p[campo];
-  const esEntero = campo === 'disponible';
-  td.innerHTML = `<input type="number" value="${valorActual}" step="${esEntero?1:'0.01'}" min="0"
+  const valorActual = campo === 'precioCosto' ? p[campo].toFixed(4) : p[campo];
+  const esEntero = campo === 'disponible' || campo === 'stockInicial';
+  const step = esEntero ? 1 : campo === 'precioCosto' ? '0.0001' : '0.01';
+  td.innerHTML = `<input type="number" value="${valorActual}" step="${step}" min="0"
     style="width:80px;padding:3px 6px;border:1px solid #1a3a6b;border-radius:4px;font-size:12px;"
     onblur="guardarCelda(this,'${codigo}','${campo}')"
     onkeydown="if(event.key==='Enter')this.blur();if(event.key==='Escape'){renderInventario();}"
@@ -725,6 +968,33 @@ function exportarHistorico(idx) {
 }
 
 // ===== FACTURAS =====
+function fillProveedorSelect() {
+  const sel = document.getElementById('f_proveedor');
+  if (!sel) return;
+  const cur = sel.value;
+  sel.innerHTML = '<option value="">-- Seleccionar --</option>';
+  (db.proveedores||[]).forEach(p => {
+    const opt = document.createElement('option');
+    opt.value = p.nombre;
+    opt.textContent = p.nombre;
+    sel.appendChild(opt);
+  });
+  const otroOpt = document.createElement('option');
+  otroOpt.value = 'Otro';
+  otroOpt.textContent = 'Otro';
+  sel.appendChild(otroOpt);
+  sel.value = cur;
+}
+
+function autoFillDiasCredito() {
+  const nombre = document.getElementById('f_proveedor').value;
+  const prov = (db.proveedores||[]).find(p => p.nombre === nombre);
+  if (prov) {
+    document.getElementById('f_dias').value = prov.dias;
+  }
+  calcVencimiento();
+}
+
 function calcVencimiento() {
   const fecha = document.getElementById('f_emision').value;
   const dias = parseInt(document.getElementById('f_dias').value)||0;
@@ -736,6 +1006,7 @@ function calcVencimiento() {
 }
 function limpiarFactura() {
   ['f_numero','f_dias','f_emision','f_vencimiento','f_monto','f_pago','f_obs'].forEach(id => document.getElementById(id).value='');
+  document.getElementById('f_proveedor').value='';
   document.getElementById('f_dias').value=30;
   document.getElementById('f_estado').value='Pendiente';
 }
@@ -749,7 +1020,7 @@ function registrarFactura() {
   const estado = document.getElementById('f_estado').value;
   const pago = document.getElementById('f_pago').value;
   const obs = document.getElementById('f_obs').value;
-  if (!numero || !emision || !monto) { alert('Número, fecha y monto son requeridos.'); return; }
+  if (!numero || !proveedor || !emision || !monto) { alert('Número, proveedor, fecha y monto son requeridos.'); return; }
   db.facturas.push({ id: Date.now(), numero, proveedor, dias, emision, vencimiento, monto, estado, pago: pago||'—', obs: obs||'—' });
   saveDB(); limpiarFactura(); renderFacturas();
   alert('✅ Factura registrada.');
@@ -757,16 +1028,81 @@ function registrarFactura() {
 function renderFacturas() {
   const q = (document.getElementById('buscarFactura').value||'').toLowerCase();
   const filtro = document.getElementById('filtroFactura').value;
+  const orden = document.getElementById('ordenFactura') ? document.getElementById('ordenFactura').value : 'ninguno';
   let data = db.facturas.filter(f => !q || f.numero.toLowerCase().includes(q) || f.proveedor.toLowerCase().includes(q));
   if (filtro !== 'todos') data = data.filter(f => f.estado === filtro);
+
+  if (orden === 'asc' || orden === 'desc') {
+    data = [...data].sort((a,b) => {
+      const da = diasRestantes(a.vencimiento);
+      const db_ = diasRestantes(b.vencimiento);
+      return orden === 'asc' ? da - db_ : db_ - da;
+    });
+  } else {
+    data = [...data].reverse();
+  }
+
   document.getElementById('tablaFacturas').innerHTML = data.length
-    ? [...data].reverse().map(f => {
+    ? data.map(f => {
         const dias = diasRestantes(f.vencimiento);
         const estadoBadge = f.estado === 'Pagado' ? '<span class="badge badge-green">Pagado</span>' : '<span class="badge badge-red">Pendiente</span>';
         const diasBadge = f.estado === 'Pagado' ? '—' : `<span class="badge ${dias<0?'badge-red':dias<=5?'badge-amber':'badge-blue'}">${dias<0?Math.abs(dias)+' atrás':dias+' días'}</span>`;
-        return `<tr><td>${f.numero}</td><td>${f.proveedor}</td><td>${f.dias}</td><td>${f.emision}</td><td>${f.vencimiento}</td><td>${Q(f.monto)}</td><td>${estadoBadge}</td><td>${f.pago}</td><td>${diasBadge}</td><td style="max-width:120px;overflow:hidden;text-overflow:ellipsis">${f.obs}</td><td><button class="btn btn-danger" onclick="eliminar('facturas',${f.id})">✕</button></td></tr>`;
+        const btnPagar = f.estado === 'Pendiente' ? `<button class="btn btn-success" style="font-size:11px;padding:5px 10px;margin-right:4px;" onclick="abrirPagoFactura(${f.id})">💰 Pagar</button>` : '';
+        return `<tr><td>${f.numero}</td><td>${f.proveedor}</td><td>${f.dias}</td><td>${f.emision}</td><td>${f.vencimiento}</td><td>${Q(f.monto)}</td><td>${estadoBadge}</td><td>${f.pago}</td><td>${diasBadge}</td><td style="max-width:120px;overflow:hidden;text-overflow:ellipsis">${f.obs}</td><td>${btnPagar}<button class="btn btn-danger" onclick="eliminar('facturas',${f.id})">✕</button></td></tr>`;
       }).join('')
     : '<tr><td colspan="11" style="color:#aaa;text-align:center">Sin facturas registradas</td></tr>';
+}
+
+// ===== MARCAR FACTURA COMO PAGADA =====
+function buscarFacturaPendiente() {
+  const q = (document.getElementById('pf_buscar').value||'').trim().toLowerCase();
+  const cont = document.getElementById('pf_resultado');
+  if (!q) { cont.innerHTML = ''; return; }
+  const resultados = db.facturas.filter(f => f.estado === 'Pendiente' && f.numero.toLowerCase().includes(q));
+  if (resultados.length === 0) {
+    cont.innerHTML = '<p style="color:#aaa;font-size:13px;">No se encontraron facturas pendientes con ese número.</p>';
+    return;
+  }
+  cont.innerHTML = resultados.map(f => `
+    <div style="border:1px solid #d4f5e2;border-radius:8px;padding:14px;margin-bottom:10px;background:white;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+        <div>
+          <b style="color:#1a3a6b;">${f.numero}</b> — ${f.proveedor}
+          <div style="font-size:12px;color:#666;">Monto: <b>${Q(f.monto)}</b> | Vence: ${f.vencimiento}</div>
+        </div>
+        <span class="badge badge-red">Pendiente</span>
+      </div>
+      <div class="form-grid">
+        <div class="form-group"><label>Fecha de Pago</label><input type="date" id="pf_fecha_${f.id}" value="${today()}"></div>
+        <div class="form-group" style="grid-column:span 2"><label>Observaciones</label><textarea id="pf_obs_${f.id}" rows="2" style="resize:vertical;">${f.obs && f.obs !== '—' ? f.obs : ''}</textarea></div>
+      </div>
+      <div class="form-actions"><button class="btn btn-success" onclick="confirmarPagoFactura(${f.id})">✅ Marcar como Pagada</button></div>
+    </div>
+  `).join('');
+}
+
+function confirmarPagoFactura(id) {
+  const f = db.facturas.find(x => x.id === id);
+  if (!f) return;
+  const fecha = document.getElementById(`pf_fecha_${id}`).value;
+  const obs = document.getElementById(`pf_obs_${id}`).value;
+  if (!fecha) { alert('Por favor indica la fecha de pago.'); return; }
+  f.estado = 'Pagado';
+  f.pago = fecha;
+  f.obs = obs || '—';
+  saveDB();
+  document.getElementById('pf_buscar').value = '';
+  document.getElementById('pf_resultado').innerHTML = '';
+  renderFacturas();
+  alert(`✅ Factura ${f.numero} marcada como pagada.`);
+}
+
+function abrirPagoFactura(id) {
+  const f = db.facturas.find(x => x.id === id);
+  if (!f) return;
+  document.getElementById('pf_buscar').value = f.numero;
+  buscarFacturaPendiente();
+  document.getElementById('pf_buscar').scrollIntoView({behavior:'smooth', block:'center'});
 }
 
 function renderReportes() {
@@ -796,7 +1132,7 @@ function renderReportes() {
 
   // Por proveedor
   const porProv = {};
-  PROVEEDORES.forEach(p => { porProv[p] = {total:0,pagado:0,pendiente:0}; });
+  getNombresProveedores().forEach(p => { porProv[p] = {total:0,pagado:0,pendiente:0}; });
   db.facturas.forEach(f => {
     if (!porProv[f.proveedor]) porProv[f.proveedor] = {total:0,pagado:0,pendiente:0};
     porProv[f.proveedor].total += f.monto;
@@ -835,7 +1171,266 @@ function renderReportes() {
   `;
 }
 
-// ===== ELIMINAR =====
+// ===== PROVEEDORES =====
+function limpiarProveedor() {
+  ['p_nombre','p_dias','p_telefono','p_correo','p_contacto','p_notas'].forEach(id => document.getElementById(id).value='');
+  document.getElementById('p_dias').value = 30;
+}
+
+function registrarProveedor() {
+  const nombre = document.getElementById('p_nombre').value.trim();
+  const dias = parseInt(document.getElementById('p_dias').value)||0;
+  const telefono = document.getElementById('p_telefono').value.trim();
+  const correo = document.getElementById('p_correo').value.trim();
+  const contacto = document.getElementById('p_contacto').value.trim();
+  const notas = document.getElementById('p_notas').value.trim();
+  if (!nombre) { alert('El nombre del proveedor es requerido.'); return; }
+  if (db.proveedores.find(p => p.nombre.toLowerCase() === nombre.toLowerCase())) { alert('⚠️ Ya existe un proveedor con ese nombre.'); return; }
+  db.proveedores.push({ id: Date.now(), nombre, dias, telefono, correo, contacto, notas });
+  saveDB();
+  limpiarProveedor();
+  renderProveedores();
+  fillProveedorSelect();
+  alert('✅ Proveedor registrado.');
+}
+
+function renderProveedores() {
+  const tbody = document.getElementById('tablaProveedores');
+  if (!tbody) return;
+  const data = db.proveedores || [];
+  tbody.innerHTML = data.length
+    ? data.map(p => `<tr>
+        <td><b>${p.nombre}</b></td>
+        <td style="${editStyleProv()}" onclick="editarProveedorDias(${p.id})" title="Clic para editar días de crédito">${p.dias} días</td>
+        <td>${p.telefono||'—'}</td>
+        <td>${p.correo||'—'}</td>
+        <td>${p.contacto||'—'}</td>
+        <td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;">${p.notas||'—'}</td>
+        <td><button class="btn btn-danger" onclick="eliminarProveedor(${p.id})">✕</button></td>
+      </tr>`).join('')
+    : '<tr><td colspan="7" style="color:#aaa;text-align:center">Sin proveedores registrados</td></tr>';
+}
+
+function editStyleProv() { return 'background:#f0f7ff;cursor:pointer;border-bottom:1px dashed #4da6ff;'; }
+
+function editarProveedorDias(id) {
+  const p = db.proveedores.find(x => x.id === id);
+  if (!p) return;
+  const nuevo = prompt(`Días de crédito para ${p.nombre}:`, p.dias);
+  if (nuevo === null) return;
+  const val = parseInt(nuevo);
+  if (isNaN(val) || val < 0) { alert('Por favor ingresa un número válido.'); return; }
+  p.dias = val;
+  saveDB();
+  renderProveedores();
+}
+
+function eliminarProveedor(id) {
+  const p = db.proveedores.find(x => x.id === id);
+  if (!p) return;
+  const enUso = db.facturas.some(f => f.proveedor === p.nombre);
+  if (enUso && !confirm(`El proveedor "${p.nombre}" tiene facturas registradas. ¿Eliminarlo de todas formas? (las facturas existentes no se modificarán)`)) return;
+  if (!enUso && !confirm(`¿Eliminar al proveedor "${p.nombre}"?`)) return;
+  db.proveedores = db.proveedores.filter(x => x.id !== id);
+  saveDB();
+  renderProveedores();
+  fillProveedorSelect();
+}
+
+// ===== INFORME MENSUAL (estructura tipo Excel) =====
+function renderInforme() {
+  // Cargar valores guardados de inputs editables
+  if (!db.informeConfig) db.informeConfig = { saldoCostoAnt: 0, utilRetenidas: 0, partSemestre: 0 };
+  const saldoEl = document.getElementById('inf_saldoCostoAnt');
+  const utilEl = document.getElementById('inf_utilRetenidas');
+  const semEl = document.getElementById('inf_partSemestre');
+  if (saldoEl.value === '') saldoEl.value = db.informeConfig.saldoCostoAnt;
+  if (utilEl.value === '') utilEl.value = db.informeConfig.utilRetenidas;
+  if (semEl.value === '') semEl.value = db.informeConfig.partSemestre;
+
+  const saldoCostoAnt = parseFloat(saldoEl.value)||0;
+  const utilRetenidas = parseFloat(utilEl.value)||0;
+  const partSemestre = parseFloat(semEl.value)||0;
+  db.informeConfig = { saldoCostoAnt, utilRetenidas, partSemestre };
+  saveDB();
+
+  document.getElementById('inf_mesLabel').textContent = '— ' + (db.mesActual || new Date().toLocaleDateString('es-GT',{month:'long',year:'numeric'}));
+
+  // --- Datos base ---
+  const totalVentas = db.ventas.reduce((s,v)=>s+v.total,0);
+  const totalCostoVentasMes = db.ventas.reduce((s,v)=>s+(v.costo*v.cantidad),0);
+  const totalUtilidadMes = db.ventas.reduce((s,v)=>s+v.utilidad,0);
+  const totalCompras = db.compras.reduce((s,c)=>s+c.total,0);
+  const facturasPagadas = db.facturas.filter(f=>f.estado==='Pagado');
+  const facturasPendientes = db.facturas.filter(f=>f.estado==='Pendiente');
+  const totalFactPagadas = facturasPagadas.reduce((s,f)=>s+f.monto,0);
+  const totalFactPorPagar = facturasPendientes.reduce((s,f)=>s+f.monto,0);
+
+  // --- INGRESOS ---
+  const totalIngresos = saldoCostoAnt + totalCostoVentasMes + totalUtilidadMes;
+  document.getElementById('inf_ingresos').innerHTML = `
+    <div class="prov-row"><span>Saldo Costos Mes Anterior</span><b>${Q(saldoCostoAnt)}</b></div>
+    <div class="prov-row"><span>Costo de Ventas del Mes</span><b>${Q(totalCostoVentasMes)}</b></div>
+    <div class="prov-row"><span>Utilidad del Mes</span><b>${Q(totalUtilidadMes)}</b></div>
+    <div class="prov-row" style="font-weight:700;border-top:2px solid #d0d7e3;padding-top:10px;margin-top:4px;"><span>Total Ingresos</span><b style="color:#22863a">${Q(totalIngresos)}</b></div>
+  `;
+
+  // --- EGRESOS (facturas pagadas) ---
+  document.getElementById('inf_egresos').innerHTML = facturasPagadas.length
+    ? facturasPagadas.map(f => `<tr><td>${f.pago}</td><td>${f.proveedor}</td><td>${f.numero}</td><td>${Q(f.monto)}</td></tr>`).join('')
+    : '<tr><td colspan="4" style="color:#aaa;text-align:center">Sin facturas pagadas este mes</td></tr>';
+  document.getElementById('inf_totalFactPagadas').textContent = Q(totalFactPagadas);
+
+  // --- COSTO DE VENTAS ---
+  const totalDeCostos = saldoCostoAnt + totalCostoVentasMes;
+  const saldoCostosDisponible = totalDeCostos - totalFactPagadas;
+  document.getElementById('inf_costoVentas').innerHTML = `
+    <div class="prov-row"><span>Saldo Mes Anterior</span><b>${Q(saldoCostoAnt)}</b></div>
+    <div class="prov-row"><span>Costo de Ventas (mes actual)</span><b>${Q(totalCostoVentasMes)}</b></div>
+    <div class="prov-row" style="font-weight:700;"><span>Total de Costos</span><b>${Q(totalDeCostos)}</b></div>
+    <div class="prov-row"><span>(-) Total Facturas Pagadas</span><b style="color:#c0392b">-${Q(totalFactPagadas)}</b></div>
+    <div class="prov-row" style="font-weight:700;border-top:2px solid #d0d7e3;padding-top:10px;margin-top:4px;"><span>Saldo de Costos Disponible</span><b style="color:#1a3a6b">${Q(saldoCostosDisponible)}</b></div>
+  `;
+
+  // --- UTILIDAD DE VENTAS ---
+  const totalUtilidad = utilRetenidas + totalUtilidadMes;
+  const cobroUtilidades = 0; // no hay módulo de retiros de utilidad aún
+  const totalUtilDisponible = totalUtilidad - cobroUtilidades;
+  const participacionTrimestral = totalUtilidad * 0.05;
+  const pagoInversion = participacionTrimestral + partSemestre;
+  const utilidadesDisponibles = totalUtilDisponible - partSemestre - participacionTrimestral;
+  document.getElementById('inf_utilidad').innerHTML = `
+    <div class="prov-row"><span>Utilidades Retenidas</span><b>${Q(utilRetenidas)}</b></div>
+    <div class="prov-row"><span>Utilidad del Mes</span><b>${Q(totalUtilidadMes)}</b></div>
+    <div class="prov-row" style="font-weight:700;"><span>Total Utilidad</span><b>${Q(totalUtilidad)}</b></div>
+    <div class="prov-row"><span>(-) Cobro de Utilidades</span><b style="color:#c0392b">-${Q(cobroUtilidades)}</b></div>
+    <div class="prov-row" style="font-weight:700;"><span>Total Utilidad Disponible</span><b>${Q(totalUtilDisponible)}</b></div>
+    <div class="prov-row" style="margin-top:10px;padding-top:10px;border-top:1px dashed #e0e0e0;font-size:12px;color:#666;"><span>(-) Participación trimestral inversión (5%)</span><b style="color:#e67e22">-${Q(participacionTrimestral)}</b></div>
+    <div class="prov-row" style="font-size:12px;color:#666;"><span>(-) Participación semestral inversión</span><b style="color:#e67e22">-${Q(partSemestre)}</b></div>
+    <div class="prov-row" style="font-size:12px;color:#666;"><span>Pago a Inversión</span><b>${Q(pagoInversion)}</b></div>
+    <div class="prov-row" style="font-weight:700;border-top:2px solid #d0d7e3;padding-top:10px;margin-top:4px;"><span>Utilidades Disponibles</span><b style="color:#22863a">${Q(utilidadesDisponibles)}</b></div>
+  `;
+
+  // --- FLUJO DE INVENTARIO ---
+  document.getElementById('inf_flujoInv').innerHTML = `
+    <div class="prov-row"><span>Compras del Mes</span><b>${Q(totalCompras)}</b></div>
+    <div class="prov-row"><span>Facturas Pagadas</span><b style="color:#22863a">${Q(totalFactPagadas)}</b></div>
+    <div class="prov-row" style="font-weight:700;border-top:2px solid #d0d7e3;padding-top:10px;margin-top:4px;"><span>Facturas por Pagar (próximo mes)</span><b style="color:#c0392b">${Q(totalFactPorPagar)}</b></div>
+  `;
+
+  // --- SALDO DE INVENTARIO ---
+  const costoInventario = db.inventario.reduce((s,p)=>s+(p.disponible*p.precioCosto),0);
+  const ventaInventario = db.inventario.reduce((s,p)=>s+(p.disponible*p.precioVenta),0);
+  document.getElementById('inf_saldoInv').innerHTML = `
+    <div class="prov-row"><span>Costo de Inventario</span><b style="color:#c0392b">${Q(costoInventario)}</b></div>
+    <div class="prov-row"><span>Precio Venta de Inventario</span><b style="color:#22863a">${Q(ventaInventario)}</b></div>
+  `;
+
+  // --- APOYO A PACIENTE CRÓNICO ---
+  const ventasPacientes = db.ventas.filter(v => v.paciente && v.paciente !== '—' && v.paciente.trim() !== '');
+  document.getElementById('inf_apoyoPaciente').innerHTML = ventasPacientes.length
+    ? ventasPacientes.map(v => `<tr><td>${v.fecha}</td><td>${v.producto}</td><td>${v.paciente}</td><td>${v.cantidad}</td></tr>`).join('')
+    : '<tr><td colspan="4" style="color:#aaa;text-align:center">Sin registros de pacientes este mes</td></tr>';
+
+  // --- CUADRE AUTOMÁTICO ---
+  // Total costos de ventas realizadas disponible + total costo de inventario = valor total de facturas por pagar
+  const sumaCuadre = saldoCostosDisponible + costoInventario;
+  document.getElementById('cuadre_costoVentasDisp').textContent = Q(saldoCostosDisponible);
+  document.getElementById('cuadre_costoInv').textContent = Q(costoInventario);
+  document.getElementById('cuadre_suma').textContent = Q(sumaCuadre);
+  document.getElementById('cuadre_facturasPorPagar').textContent = Q(totalFactPorPagar);
+
+  const diferencia = sumaCuadre - totalFactPorPagar;
+  const resultadoEl = document.getElementById('cuadre_resultado');
+  const panel = document.getElementById('cuadrePanel');
+  if (Math.abs(diferencia) < 0.01) {
+    resultadoEl.innerHTML = `✅ CUADRE CORRECTO — La suma coincide con el total de facturas por pagar.`;
+    resultadoEl.style.background = '#d4f5e2';
+    resultadoEl.style.color = '#22863a';
+    panel.style.borderColor = '#22863a';
+  } else {
+    const signo = diferencia > 0 ? '+' : '';
+    resultadoEl.innerHTML = `⚠️ DESCUADRE DETECTADO — Diferencia: <span style="font-size:18px;">${signo}${Q(diferencia)}</span><br><span style="font-size:12px;font-weight:400;">Revisa compras, ventas o facturas registradas para encontrar la diferencia.</span>`;
+    resultadoEl.style.background = '#fce8e6';
+    resultadoEl.style.color = '#c0392b';
+    panel.style.borderColor = '#c0392b';
+  }
+}
+
+function exportInformeCSV() {
+  const saldoCostoAnt = parseFloat(document.getElementById('inf_saldoCostoAnt').value)||0;
+  const utilRetenidas = parseFloat(document.getElementById('inf_utilRetenidas').value)||0;
+  const partSemestre = parseFloat(document.getElementById('inf_partSemestre').value)||0;
+
+  const totalCostoVentasMes = db.ventas.reduce((s,v)=>s+(v.costo*v.cantidad),0);
+  const totalUtilidadMes = db.ventas.reduce((s,v)=>s+v.utilidad,0);
+  const totalCompras = db.compras.reduce((s,c)=>s+c.total,0);
+  const totalFactPagadas = db.facturas.filter(f=>f.estado==='Pagado').reduce((s,f)=>s+f.monto,0);
+  const totalFactPorPagar = db.facturas.filter(f=>f.estado==='Pendiente').reduce((s,f)=>s+f.monto,0);
+  const totalDeCostos = saldoCostoAnt + totalCostoVentasMes;
+  const saldoCostosDisponible = totalDeCostos - totalFactPagadas;
+  const totalUtilidad = utilRetenidas + totalUtilidadMes;
+  const participacionTrimestral = totalUtilidad * 0.05;
+  const totalUtilDisponible = totalUtilidad;
+  const utilidadesDisponibles = totalUtilDisponible - partSemestre - participacionTrimestral;
+  const costoInventario = db.inventario.reduce((s,p)=>s+(p.disponible*p.precioCosto),0);
+  const ventaInventario = db.inventario.reduce((s,p)=>s+(p.disponible*p.precioVenta),0);
+  const sumaCuadre = saldoCostosDisponible + costoInventario;
+
+  const rows = [
+    ['INFORME FINANCIERO', db.mesActual || nombreMesActual().replace(/_/g,' ')],
+    [],
+    ['INGRESOS','Valor'],
+    ['Saldo Costos Mes Anterior', saldoCostoAnt.toFixed(2)],
+    ['Costo de Ventas del Mes', totalCostoVentasMes.toFixed(2)],
+    ['Utilidad del Mes', totalUtilidadMes.toFixed(2)],
+    ['Total Ingresos', (saldoCostoAnt+totalCostoVentasMes+totalUtilidadMes).toFixed(2)],
+    [],
+    ['EGRESOS - FACTURAS PAGADAS','Valor'],
+    ...db.facturas.filter(f=>f.estado==='Pagado').map(f=>[`${f.numero} (${f.proveedor}) - ${f.pago}`, f.monto.toFixed(2)]),
+    ['Total Facturas Pagadas', totalFactPagadas.toFixed(2)],
+    [],
+    ['COSTO DE VENTAS','Valor'],
+    ['Saldo Mes Anterior', saldoCostoAnt.toFixed(2)],
+    ['Costo de Ventas', totalCostoVentasMes.toFixed(2)],
+    ['Total de Costos', totalDeCostos.toFixed(2)],
+    ['Total Facturas Pagadas', (-totalFactPagadas).toFixed(2)],
+    ['Saldo de Costos Disponible', saldoCostosDisponible.toFixed(2)],
+    [],
+    ['UTILIDAD DE VENTAS','Valor'],
+    ['Utilidades Retenidas', utilRetenidas.toFixed(2)],
+    ['Utilidad del Mes', totalUtilidadMes.toFixed(2)],
+    ['Total Utilidad', totalUtilidad.toFixed(2)],
+    ['Participación trimestral (5%)', participacionTrimestral.toFixed(2)],
+    ['Participación semestral', partSemestre.toFixed(2)],
+    ['Utilidades Disponibles', utilidadesDisponibles.toFixed(2)],
+    [],
+    ['FLUJO DE INVENTARIO','Valor'],
+    ['Compras', totalCompras.toFixed(2)],
+    ['Facturas Pagadas', totalFactPagadas.toFixed(2)],
+    ['Facturas por Pagar Próximo Mes', totalFactPorPagar.toFixed(2)],
+    [],
+    ['SALDO DE INVENTARIO','Valor'],
+    ['Costo de Inventario', costoInventario.toFixed(2)],
+    ['Precio Venta Inventario', ventaInventario.toFixed(2)],
+    [],
+    ['CUADRE AUTOMÁTICO','Valor'],
+    ['Saldo Costos Disponible', saldoCostosDisponible.toFixed(2)],
+    ['Costo de Inventario', costoInventario.toFixed(2)],
+    ['Suma', sumaCuadre.toFixed(2)],
+    ['Total Facturas por Pagar', totalFactPorPagar.toFixed(2)],
+    ['Diferencia', (sumaCuadre-totalFactPorPagar).toFixed(2)],
+    [],
+    ['APOYO A PACIENTE CRÓNICO','Fecha','Producto','Paciente','Cantidad'],
+    ...db.ventas.filter(v=>v.paciente && v.paciente!=='—' && v.paciente.trim()!=='').map(v=>['', v.fecha, v.producto, v.paciente, v.cantidad]),
+  ];
+
+  const csv = rows.map(r=>r.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(',')).join('\n');
+  const a = document.createElement('a');
+  a.href = 'data:text/csv;charset=utf-8,\uFEFF'+encodeURIComponent(csv);
+  a.download = `informe_${nombreMesActual()}.csv`;
+  a.click();
+}
 function eliminar(tabla, id) {
   if (!confirm('¿Eliminar este registro?')) return;
   if (tabla === 'compras') {
@@ -862,7 +1457,7 @@ function nombreMesActual() {
 function exportCSV(tabla) {
   let rows = [], headers = [];
   const mes = nombreMesActual();
-  if (tabla==='compras') { headers=['Fecha','Código','Producto','Cantidad','Precio/U','PPP','Total']; rows=db.compras.map(c=>[c.fecha,c.codigo,c.producto,c.cantidad,c.precio.toFixed(2),c.ppp||'—',c.total.toFixed(2)]); }
+  if (tabla==='compras') { headers=['Fecha','Código','Producto','Cantidad','Precio/U','PPP','Total']; rows=db.compras.map(c=>[c.fecha,c.codigo,c.producto,c.cantidad,c.precio.toFixed(4),c.ppp||'—',c.total.toFixed(2)]); }
   if (tabla==='ventas') { headers=['Fecha','Código','Producto','Paciente','Cantidad','P.Costo','P.Venta','Total','Utilidad']; rows=db.ventas.map(v=>[v.fecha,v.codigo,v.producto,v.paciente,v.cantidad,v.costo.toFixed(2),v.pventa.toFixed(2),v.total.toFixed(2),v.utilidad.toFixed(2)]); }
   if (tabla==='inventario') { headers=['Código','Producto','Stock Ini','Compras','Ventas','Disponible','P.Costo (PPP)','P.Venta']; rows=db.inventario.map(p=>[p.codigo,p.producto,p.stockInicial,p.compras,p.ventas,p.disponible,p.precioCosto.toFixed(4),p.precioVenta.toFixed(2)]); }
   if (tabla==='facturas') { headers=['No.Factura','Proveedor','Días Crédito','F.Emisión','F.Vencimiento','Monto','Estado','F.Pago','Observaciones']; rows=db.facturas.map(f=>[f.numero,f.proveedor,f.dias,f.emision,f.vencimiento,f.monto.toFixed(2),f.estado,f.pago,f.obs]); }
@@ -873,13 +1468,256 @@ function exportCSV(tabla) {
   a.click();
 }
 
+// ===== IMPORT CSV =====
+// Parser sencillo de CSV con soporte para campos entre comillas
+function parseCSV(text) {
+  const rows = [];
+  let row = [], field = '', inQuotes = false;
+  // Normalizar saltos de línea y quitar BOM
+  text = text.replace(/^\uFEFF/, '').replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (inQuotes) {
+      if (ch === '"') {
+        if (text[i+1] === '"') { field += '"'; i++; }
+        else inQuotes = false;
+      } else field += ch;
+    } else {
+      if (ch === '"') inQuotes = true;
+      else if (ch === ',') { row.push(field); field = ''; }
+      else if (ch === '\n') { row.push(field); rows.push(row); row = []; field = ''; }
+      else field += ch;
+    }
+  }
+  if (field.length || row.length) { row.push(field); rows.push(row); }
+  // Quitar filas vacías
+  return rows.filter(r => r.some(c => c.trim() !== ''));
+}
+
+function num(v) { return parseFloat(String(v).replace(',', '.')) || 0; }
+function intg(v) { return parseInt(String(v).replace(',', '.')) || 0; }
+
+function importCSV(event, tabla) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      const rows = parseCSV(e.target.result);
+      if (rows.length < 2) { alert('⚠️ El archivo está vacío o no tiene datos.'); return; }
+      const header = rows[0].map(h => h.trim());
+      const data = rows.slice(1);
+      let agregados = 0, omitidos = 0;
+
+      if (tabla === 'compras') {
+        const expected = ['Fecha','Código','Producto','Cantidad','Precio/U','PPP','Total'];
+        if (!validarEncabezado(header, expected, 'compras')) return;
+        data.forEach(r => {
+          const [fecha, codigo, producto, cantidad, precio, ppp, total] = r;
+          if (!fecha || !codigo || !cantidad) { omitidos++; return; }
+          const p = getProd(codigo.trim());
+          const cant = intg(cantidad), prec = num(precio);
+          db.compras.push({ id: Date.now()+agregados, fecha: fecha.trim(), codigo: codigo.trim(), producto: (producto||(p?p.producto:codigo)).trim(), cantidad: cant, precio: prec, ppp: (ppp && ppp.trim() !== '—') ? ppp.trim() : '', total: num(total) || cant*prec });
+          if (p) {
+            const precioAnterior = p.precioCosto;
+            if (Math.abs(prec - precioAnterior) > 0.0001) {
+              const pppCalc = ((p.disponible * precioAnterior) + (cant * prec)) / (p.disponible + cant || 1);
+              p.precioCosto = pppCalc;
+            }
+            p.compras += cant;
+            p.disponible += cant;
+          }
+          agregados++;
+        });
+      }
+
+      else if (tabla === 'ventas') {
+        const expected = ['Fecha','Código','Producto','Paciente','Cantidad','P.Costo','P.Venta','Total','Utilidad'];
+        if (!validarEncabezado(header, expected, 'ventas')) return;
+        data.forEach(r => {
+          const [fecha, codigo, producto, paciente, cantidad, costo, pventa, total, utilidad] = r;
+          if (!fecha || !codigo || !cantidad) { omitidos++; return; }
+          const p = getProd(codigo.trim());
+          const cant = intg(cantidad), c = num(costo), pv = num(pventa);
+          db.ventas.push({ id: Date.now()+agregados, fecha: fecha.trim(), codigo: codigo.trim(), producto: (producto||(p?p.producto:codigo)).trim(), paciente: (paciente||'—').trim(), cantidad: cant, costo: c, pventa: pv, iva: 0, total: num(total) || pv*cant, utilidad: num(utilidad) || (pv-c)*cant });
+          if (p) { p.ventas += cant; p.disponible -= cant; }
+          agregados++;
+        });
+      }
+
+      else if (tabla === 'inventario') {
+        const expected = ['Código','Producto','Stock Ini','Compras','Ventas','Disponible','P.Costo (PPP)','P.Venta'];
+        if (!validarEncabezado(header, expected, 'inventario')) return;
+        data.forEach(r => {
+          const [codigo, producto, stockIni, compras, ventas, disponible, costo, venta] = r;
+          if (!codigo || !producto) { omitidos++; return; }
+          const cod = codigo.trim();
+          let p = getProd(cod);
+          const obj = {
+            codigo: cod, producto: producto.trim(),
+            stockInicial: intg(stockIni), compras: intg(compras), ventas: intg(ventas),
+            disponible: intg(disponible), precioCosto: num(costo), precioVenta: num(venta)
+          };
+          if (p) { Object.assign(p, obj); }
+          else { db.inventario.push(obj); }
+          agregados++;
+        });
+      }
+
+      else if (tabla === 'facturas') {
+        const expected = ['No.Factura','Proveedor','Días Crédito','F.Emisión','F.Vencimiento','Monto','Estado','F.Pago','Observaciones'];
+        if (!validarEncabezado(header, expected, 'facturas')) return;
+        data.forEach(r => {
+          const [numero, proveedor, dias, emision, vencimiento, monto, estado, pago, obs] = r;
+          if (!numero || !emision) { omitidos++; return; }
+          const num_ = numero.trim();
+          // Evitar duplicados por número de factura
+          if (db.facturas.find(f => f.numero === num_)) { omitidos++; return; }
+          db.facturas.push({
+            id: Date.now()+agregados, numero: num_, proveedor: (proveedor||'Otro').trim(),
+            dias: intg(dias), emision: emision.trim(), vencimiento: (vencimiento||emision).trim(),
+            monto: num(monto), estado: (estado||'Pendiente').trim(),
+            pago: (pago||'—').trim(), obs: (obs||'—').trim()
+          });
+          agregados++;
+        });
+      }
+
+      saveDB();
+      // Refrescar la vista correspondiente
+      if (tabla === 'compras') renderCompras();
+      if (tabla === 'ventas') renderVentas();
+      if (tabla === 'inventario') renderInventario();
+      if (tabla === 'facturas') renderFacturas();
+
+      alert(`✅ Importación completada.\n\nRegistros agregados: ${agregados}\nRegistros omitidos: ${omitidos}`);
+    } catch (err) {
+      alert('❌ Error al leer el archivo CSV: ' + err.message);
+    } finally {
+      event.target.value = '';
+    }
+  };
+  reader.readAsText(file, 'UTF-8');
+}
+
+function validarEncabezado(header, expected, tabla) {
+  const limpio = header.map(h => h.trim().toLowerCase());
+  const esp = expected.map(h => h.toLowerCase());
+  const coincide = esp.every(h => limpio.includes(h));
+  if (!coincide) {
+    alert(`⚠️ El archivo no parece ser un CSV de "${tabla}" generado por este sistema.\n\nEncabezados esperados:\n${expected.join(', ')}\n\nEncabezados encontrados:\n${header.join(', ')}`);
+    return false;
+  }
+  return true;
+}
+
+// ===== AUTENTICACIÓN =====
+function intentarLogin() {
+  const usuario = (document.getElementById('login_usuario').value || '').trim();
+  const clave = document.getElementById('login_clave').value || '';
+  const errorEl = document.getElementById('loginError');
+  if (!usuario || !clave) { errorEl.textContent = 'Por favor ingresa usuario y contraseña.'; return; }
+  const u = db.usuarios.find(x => x.usuario.toLowerCase() === usuario.toLowerCase() && x.clave === clave);
+  if (!u) { errorEl.textContent = '❌ Usuario o contraseña incorrectos.'; return; }
+  errorEl.textContent = '';
+  sessionStorage.setItem('farmacia_sesion', JSON.stringify({ usuario: u.usuario, completo: u.completo, rol: u.rol }));
+  iniciarApp(u);
+}
+
+function iniciarApp(u) {
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('appWrapper').classList.add('visible');
+  document.getElementById('usuarioActual').textContent = `👤 ${u.completo} (${u.rol === 'administrador' ? 'Administrador' : 'Usuario'})`;
+  document.getElementById('navUsuarios').style.display = (u.rol === 'administrador') ? 'inline-block' : 'none';
+  renderDashboard();
+}
+
+function cerrarSesion() {
+  if (!confirm('¿Cerrar sesión?')) return;
+  sessionStorage.removeItem('farmacia_sesion');
+  location.reload();
+}
+
+function verificarSesion() {
+  try {
+    const s = sessionStorage.getItem('farmacia_sesion');
+    if (!s) return false;
+    const sesion = JSON.parse(s);
+    const u = db.usuarios.find(x => x.usuario === sesion.usuario);
+    if (!u) return false;
+    iniciarApp(u);
+    return true;
+  } catch(e) { return false; }
+}
+
+// ===== MÓDULO USUARIOS (solo Administrador) =====
+function limpiarUsuario() {
+  document.getElementById('u_nombre').value = '';
+  document.getElementById('u_completo').value = '';
+  document.getElementById('u_clave').value = '';
+  document.getElementById('u_rol').value = 'usuario';
+}
+
+function registrarUsuario() {
+  const usuario = document.getElementById('u_nombre').value.trim();
+  const completo = document.getElementById('u_completo').value.trim();
+  const clave = document.getElementById('u_clave').value;
+  const rol = document.getElementById('u_rol').value;
+  if (!usuario || !completo || !clave) { alert('Por favor completa todos los campos.'); return; }
+  if (db.usuarios.find(x => x.usuario.toLowerCase() === usuario.toLowerCase())) { alert('⚠️ Ya existe un usuario con ese nombre.'); return; }
+  db.usuarios.push({ id: Date.now(), usuario, completo, clave, rol });
+  saveDB();
+  limpiarUsuario();
+  renderUsuarios();
+  alert('✅ Usuario registrado.');
+}
+
+function renderUsuarios() {
+  const cont = document.getElementById('listaUsuarios');
+  cont.innerHTML = db.usuarios.map(u => `
+    <div class="user-row">
+      <div>
+        <b>${u.completo}</b> <span style="color:#888;">(@${u.usuario})</span>
+        <span class="badge ${u.rol==='administrador'?'badge-blue':'badge-green'}" style="margin-left:8px;">${u.rol==='administrador'?'Administrador':'Usuario'}</span>
+      </div>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-secondary" style="font-size:11px;padding:5px 10px;" onclick="cambiarClave(${u.id})">🔑 Cambiar clave</button>
+        <button class="btn btn-danger" onclick="eliminarUsuario(${u.id})">✕</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function cambiarClave(id) {
+  const u = db.usuarios.find(x => x.id === id);
+  if (!u) return;
+  const nueva = prompt(`Nueva contraseña para @${u.usuario}:`);
+  if (nueva === null) return;
+  if (!nueva.trim()) { alert('La contraseña no puede estar vacía.'); return; }
+  u.clave = nueva;
+  saveDB();
+  alert('✅ Contraseña actualizada.');
+}
+
+function eliminarUsuario(id) {
+  const u = db.usuarios.find(x => x.id === id);
+  if (!u) return;
+  if (db.usuarios.length === 1) { alert('⚠️ Debe existir al menos un usuario en el sistema.'); return; }
+  const sesion = JSON.parse(sessionStorage.getItem('farmacia_sesion') || '{}');
+  if (sesion.usuario === u.usuario) { alert('⚠️ No puedes eliminar el usuario con el que iniciaste sesión.'); return; }
+  if (!confirm(`¿Eliminar al usuario @${u.usuario}?`)) return;
+  db.usuarios = db.usuarios.filter(x => x.id !== id);
+  saveDB();
+  renderUsuarios();
+}
+
 // ===== INIT =====
 window.onload = () => {
   loadDB();
   document.getElementById('c_fecha').value = today();
   document.getElementById('v_fecha').value = today();
   document.getElementById('f_emision').value = today();
-  renderDashboard();
+  verificarSesion();
 };
 </script>
 
